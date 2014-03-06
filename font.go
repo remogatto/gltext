@@ -6,15 +6,16 @@ package gltext
 
 import (
 	"fmt"
-	"github.com/go-gl/gl"
-	"github.com/go-gl/glh"
 	"image"
+
+	"github.com/go-gl/glh"
+	gl "github.com/remogatto/opengles2"
 )
 
 // A Font allows rendering of text to an OpenGL context.
 type Font struct {
 	config         *FontConfig // Character set for this font.
-	texture        gl.Texture  // Holds the glyph texture id.
+	texture        uint32      // Holds the glyph texture id.
 	listbase       uint        // Holds the first display list id.
 	maxGlyphWidth  int         // Largest glyph width.
 	maxGlyphHeight int         // Largest glyph height.
@@ -37,15 +38,15 @@ func loadFont(img *image.RGBA, config *FontConfig) (f *Font, err error) {
 
 	// Create the texture itself. It will contain all glyphs.
 	// Individual glyph-quads display a subset of this texture.
-	f.texture = gl.GenTexture()
-	f.texture.Bind(gl.TEXTURE_2D)
+	gl.GenTextures(1, &f.texture)
+	gl.BindTexture(gl.TEXTURE_2D, f.texture)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ib.Dx(), ib.Dy(), 0,
-		gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.Sizei(ib.Dx()), gl.Sizei(ib.Dy()), 0,
+		gl.RGBA, gl.UNSIGNED_BYTE, gl.Void(&img.Pix[0]))
 
-	// Create display lists for each glyph.
-	f.listbase = gl.GenLists(len(config.Glyphs))
+	// // Create display lists for each glyph.
+	// f.listbase = gl.GenLists(len(config.Glyphs))
 
 	texWidth := float32(ib.Dx())
 	texHeight := float32(ib.Dy())
@@ -65,42 +66,42 @@ func loadFont(img *image.RGBA, config *FontConfig) (f *Font, err error) {
 		vh := float32(glyph.Height)
 
 		// Texture coordinate offsets.
-		tx1 := float32(glyph.X) / texWidth
-		ty1 := float32(glyph.Y) / texHeight
-		tx2 := (float32(glyph.X) + vw) / texWidth
-		ty2 := (float32(glyph.Y) + vh) / texHeight
+		glyph.tx1 = float32(glyph.X) / texWidth
+		glyph.ty1 = float32(glyph.Y) / texHeight
+		glyph.tx2 = (float32(glyph.X) + vw) / texWidth
+		glyph.ty2 = (float32(glyph.Y) + vh) / texHeight
 
-		// Advance width (or height if we render top-to-bottom)
-		adv := float32(glyph.Advance)
+		// // Advance width (or height if we render top-to-bottom)
+		// adv := float32(glyph.Advance)
 
-		gl.NewList(f.listbase+uint(index), gl.COMPILE)
-		{
-			gl.Begin(gl.QUADS)
-			{
-				gl.TexCoord2f(tx1, ty2)
-				gl.Vertex2f(0, 0)
-				gl.TexCoord2f(tx2, ty2)
-				gl.Vertex2f(vw, 0)
-				gl.TexCoord2f(tx2, ty1)
-				gl.Vertex2f(vw, vh)
-				gl.TexCoord2f(tx1, ty1)
-				gl.Vertex2f(0, vh)
-			}
-			gl.End()
+		// gl.NewList(f.listbase+uint(index), gl.COMPILE)
+		// {
+		// 	gl.Begin(gl.QUADS)
+		// 	{
+		// 		gl.TexCoord2f(tx1, ty2)
+		// 		gl.Vertex2f(0, 0)
+		// 		gl.TexCoord2f(tx2, ty2)
+		// 		gl.Vertex2f(vw, 0)
+		// 		gl.TexCoord2f(tx2, ty1)
+		// 		gl.Vertex2f(vw, vh)
+		// 		gl.TexCoord2f(tx1, ty1)
+		// 		gl.Vertex2f(0, vh)
+		// 	}
+		// 	gl.End()
 
-			switch config.Dir {
-			case LeftToRight:
-				gl.Translatef(adv, 0, 0)
-			case RightToLeft:
-				gl.Translatef(-adv, 0, 0)
-			case TopToBottom:
-				gl.Translatef(0, -adv, 0)
-			}
-		}
-		gl.EndList()
+		// 	switch config.Dir {
+		// 	case LeftToRight:
+		// 		gl.Translatef(adv, 0, 0)
+		// 	case RightToLeft:
+		// 		gl.Translatef(-adv, 0, 0)
+		// 	case TopToBottom:
+		// 		gl.Translatef(0, -adv, 0)
+		// 	}
+		// }
+		// gl.EndList()
 	}
 
-	err = glh.CheckGLError()
+	//	err = glh.CheckGLError()
 	return
 }
 
@@ -116,13 +117,13 @@ func (f *Font) High() rune { return f.config.High }
 // Glyphs returns the font's glyph descriptors.
 func (f *Font) Glyphs() Charset { return f.config.Glyphs }
 
-// Release releases font resources.
-// A font can no longer be used for rendering after this call completes.
-func (f *Font) Release() {
-	f.texture.Delete()
-	gl.DeleteLists(f.listbase, len(f.config.Glyphs))
-	f.config = nil
-}
+// // Release releases font resources.
+// // A font can no longer be used for rendering after this call completes.
+// func (f *Font) Release() {
+// 	f.texture.Delete()
+// 	gl.DeleteLists(f.listbase, len(f.config.Glyphs))
+// 	f.config = nil
+// }
 
 // Metrics returns the pixel width and height for the given string.
 // This takes the scale and rendering direction of the font into account.

@@ -5,17 +5,18 @@
 package gltext
 
 import (
-	"code.google.com/p/freetype-go/freetype"
-	"code.google.com/p/freetype-go/freetype/truetype"
-	"github.com/go-gl/glh"
 	"image"
 	"io"
 	"io/ioutil"
+
+	"code.google.com/p/freetype-go/freetype"
+	"code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/go-gl/glh"
 )
 
 // http://www.freetype.org/freetype2/docs/tutorial/step2.html
 
-// LoadTruetype loads a truetype font from the given stream and 
+// LoadTruetype loads a truetype font from the given stream and
 // applies the given font scale in points.
 //
 // The low and high values determine the lower and upper rune limits

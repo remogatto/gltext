@@ -16,6 +16,9 @@ type Glyph struct {
 	// Advance determines the distance to the next glyph.
 	// This is used to properly align non-monospaced fonts.
 	Advance int `json:"advance"`
+
+	// Texture coordinates
+	tx1, ty1, tx2, ty2 float32
 }
 
 // A Charset represents a set of glyph descriptors for a font.
