@@ -1,5 +1,6 @@
-# gltext black-box test
+# GLText black-box test
 
+Black-box tests for the GLText package.
 
 # Usage
 
