@@ -1,0 +1,12 @@
+android/gen
+android/libs
+android/obj
+output
+pkg
+bin
+artifacts
+output_android/
+
+
+
+

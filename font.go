@@ -5,11 +5,11 @@
 package gltext
 
 import (
-	"fmt"
 	"image"
 
 	"github.com/go-gl/glh"
 	gl "github.com/remogatto/opengles2"
+	"github.com/remogatto/shapes"
 )
 
 // A Font allows rendering of text to an OpenGL context.
@@ -51,7 +51,7 @@ func loadFont(img *image.RGBA, config *FontConfig) (f *Font, err error) {
 	texWidth := float32(ib.Dx())
 	texHeight := float32(ib.Dy())
 
-	for index, glyph := range config.Glyphs {
+	for _, glyph := range config.Glyphs {
 		// Update max glyph bounds.
 		if glyph.Width > f.maxGlyphWidth {
 			f.maxGlyphWidth = glyph.Width
@@ -175,84 +175,88 @@ func (f *Font) advanceSize(line string) int {
 	return size
 }
 
-// Printf draws the given string at the specified coordinates.
-// It expects the string to be a single line. Line breaks are not
-// handled as line breaks and are rendered as glyphs.
-//
-// In order to render multi-line text, it is up to the caller to split
-// the text up into individual lines of adequate length and then call
-// this method for each line seperately.
-func (f *Font) Printf(x, y float32, fs string, argv ...interface{}) error {
-	indices := []rune(fmt.Sprintf(fs, argv...))
+// // Printf draws the given string at the specified coordinates.
+// // It expects the string to be a single line. Line breaks are not
+// // handled as line breaks and are rendered as glyphs.
+// //
+// // In order to render multi-line text, it is up to the caller to split
+// // the text up into individual lines of adequate length and then call
+// // this method for each line seperately.
+// func (f *Font) Printf(x, y float32, fs string, argv ...interface{}) error {
+// 	indices := []rune(fmt.Sprintf(fs, argv...))
 
-	if len(indices) == 0 {
-		return nil
-	}
+// 	if len(indices) == 0 {
+// 		return nil
+// 	}
 
-	// Runes form display list indices.
-	// For this purpose, they need to be offset by -FontConfig.Low
-	low := f.config.Low
-	for i := range indices {
-		indices[i] -= low
-	}
+// 	// Runes form display list indices.
+// 	// For this purpose, they need to be offset by -FontConfig.Low
+// 	low := f.config.Low
+// 	for i := range indices {
+// 		indices[i] -= low
+// 	}
 
-	var vp [4]int32
-	gl.GetIntegerv(gl.VIEWPORT, vp[:])
+// 	var vp [4]int32
+// 	gl.GetIntegerv(gl.VIEWPORT, vp[:])
 
-	gl.PushAttrib(gl.TRANSFORM_BIT)
-	gl.MatrixMode(gl.PROJECTION)
-	gl.PushMatrix()
-	gl.LoadIdentity()
-	gl.Ortho(float64(vp[0]), float64(vp[2]), float64(vp[1]), float64(vp[3]), 0, 1)
-	gl.PopAttrib()
+// 	gl.PushAttrib(gl.TRANSFORM_BIT)
+// 	gl.MatrixMode(gl.PROJECTION)
+// 	gl.PushMatrix()
+// 	gl.LoadIdentity()
+// 	gl.Ortho(float64(vp[0]), float64(vp[2]), float64(vp[1]), float64(vp[3]), 0, 1)
+// 	gl.PopAttrib()
 
-	gl.PushAttrib(gl.LIST_BIT | gl.CURRENT_BIT | gl.ENABLE_BIT | gl.TRANSFORM_BIT)
-	{
-		gl.MatrixMode(gl.MODELVIEW)
-		gl.Disable(gl.LIGHTING)
-		gl.Disable(gl.DEPTH_TEST)
-		gl.Enable(gl.BLEND)
-		gl.Enable(gl.TEXTURE_2D)
+// 	gl.PushAttrib(gl.LIST_BIT | gl.CURRENT_BIT | gl.ENABLE_BIT | gl.TRANSFORM_BIT)
+// 	{
+// 		gl.MatrixMode(gl.MODELVIEW)
+// 		gl.Disable(gl.LIGHTING)
+// 		gl.Disable(gl.DEPTH_TEST)
+// 		gl.Enable(gl.BLEND)
+// 		gl.Enable(gl.TEXTURE_2D)
 
-		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-		gl.TexEnvf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
-		f.texture.Bind(gl.TEXTURE_2D)
-		gl.ListBase(f.listbase)
+// 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+// 		gl.TexEnvf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
+// 		f.texture.Bind(gl.TEXTURE_2D)
+// 		gl.ListBase(f.listbase)
 
-		var mv [16]float32
-		gl.GetFloatv(gl.MODELVIEW_MATRIX, mv[:])
+// 		var mv [16]float32
+// 		gl.GetFloatv(gl.MODELVIEW_MATRIX, mv[:])
 
-		gl.PushMatrix()
-		{
-			gl.LoadIdentity()
+// 		gl.PushMatrix()
+// 		{
+// 			gl.LoadIdentity()
 
-			mgw := float32(f.maxGlyphWidth)
-			mgh := float32(f.maxGlyphHeight)
+// 			mgw := float32(f.maxGlyphWidth)
+// 			mgh := float32(f.maxGlyphHeight)
 
-			switch f.config.Dir {
-			case LeftToRight, TopToBottom:
-				gl.Translatef(x, float32(vp[3])-y-mgh, 0)
-			case RightToLeft:
-				gl.Translatef(x-mgw, float32(vp[3])-y-mgh, 0)
-			}
+// 			switch f.config.Dir {
+// 			case LeftToRight, TopToBottom:
+// 				gl.Translatef(x, float32(vp[3])-y-mgh, 0)
+// 			case RightToLeft:
+// 				gl.Translatef(x-mgw, float32(vp[3])-y-mgh, 0)
+// 			}
 
-			gl.MultMatrixf(&mv)
-			gl.CallLists(len(indices), gl.UNSIGNED_INT, indices)
-		}
-		gl.PopMatrix()
-	}
-	gl.PopAttrib()
+// 			gl.MultMatrixf(&mv)
+// 			gl.CallLists(len(indices), gl.UNSIGNED_INT, indices)
+// 		}
+// 		gl.PopMatrix()
+// 	}
+// 	gl.PopAttrib()
 
-	gl.PushAttrib(gl.TRANSFORM_BIT)
-	gl.MatrixMode(gl.PROJECTION)
-	gl.PopMatrix()
-	gl.PopAttrib()
-	return glh.CheckGLError()
-}
+// 	gl.PushAttrib(gl.TRANSFORM_BIT)
+// 	gl.MatrixMode(gl.PROJECTION)
+// 	gl.PopMatrix()
+// 	gl.PopAttrib()
+// 	return glh.CheckGLError()
+// }
 
 // GlyphBounds returns the largest width and height for any of the glyphs
 // in the font. This constitutes the largest possible bounding box
 // a single glyph will have.
 func (f *Font) GlyphBounds() (int, int) {
 	return f.maxGlyphWidth, f.maxGlyphHeight
+}
+
+func (f *Font) Printf(format string, argv ...interface{}) (shapes.Shape, error) {
+	return nil, nil
 }

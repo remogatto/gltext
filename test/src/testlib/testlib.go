@@ -3,20 +3,33 @@ package testlib
 import (
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
+	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"git.tideland.biz/goas/loop"
 	"github.com/remogatto/mandala"
-	"github.com/remogatto/mandala/test/src/testlib"
+	"github.com/remogatto/mathgl"
 	gl "github.com/remogatto/opengles2"
 	"github.com/remogatto/prettytest"
 )
 
 const (
-	// I don't need high framerate for testing
+	// We don't need high framerate for testing
 	FramesPerSecond = 15
+
+	expectedImgPath = "res/drawable"
 )
+
+type world struct {
+	width, height int
+	projMatrix    mathgl.Mat4f
+	viewMatrix    mathgl.Mat4f
+}
 
 type TestSuite struct {
 	prettytest.Suite
@@ -25,10 +38,14 @@ type TestSuite struct {
 	timeout   <-chan time.Time
 
 	testDraw chan image.Image
+
+	renderState *renderState
+	outputPath  string
 }
 
 type renderLoopControl struct {
-	window chan mandala.Window
+	window   chan mandala.Window
+	drawFunc chan func()
 }
 
 type renderState struct {
@@ -43,16 +60,13 @@ func (renderState *renderState) init(window mandala.Window) {
 
 	// Set the viewport
 	gl.Viewport(0, 0, gl.Sizei(width), gl.Sizei(height))
-	gl.ClearColor(1.0, 0.0, 0.0, 1.0)
-}
-
-func (renderState *renderState) draw() {
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 }
 
 func newRenderLoopControl() *renderLoopControl {
 	return &renderLoopControl{
-		window: make(chan mandala.Window),
+		drawFunc: make(chan func()),
+		window:   make(chan mandala.Window),
 	}
 }
 
@@ -68,7 +82,7 @@ func (t *TestSuite) renderLoopFunc(control *renderLoopControl) loop.LoopFunc {
 
 		// renderState stores rendering state variables such
 		// as the EGL state
-		renderState := new(renderState)
+		t.renderState = new(renderState)
 
 		// Lock/unlock the loop to the current OS thread. This is
 		// necessary because OpenGL functions should be called from
@@ -76,25 +90,13 @@ func (t *TestSuite) renderLoopFunc(control *renderLoopControl) loop.LoopFunc {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 
-		// Create an instance of ticker and immediately stop
-		// it because we don't want to swap buffers before
-		// initializing a rendering state.
-		ticker := time.NewTicker(1)
-		ticker.Stop()
+		window := <-control.window
+		t.renderState.init(window)
 
 		for {
 			select {
-			case window := <-control.window:
-				renderState.init(window)
-				// restart the ticker with the right
-				// duration
-				ticker = time.NewTicker(time.Duration(time.Second / time.Duration(FramesPerSecond)))
-
-			// At each tick render a frame and swap buffers.
-			case <-ticker.C:
-				renderState.draw()
-				renderState.window.SwapBuffers()
-				t.testDraw <- testlib.Screenshot(renderState.window)
+			case drawFunc := <-control.drawFunc:
+				drawFunc()
 			}
 		}
 	}
@@ -192,9 +194,94 @@ func (t *TestSuite) BeforeAll() {
 
 }
 
-func NewTestSuite() *TestSuite {
+func newWorld(width, height int) *world {
+	return &world{
+		width:      width,
+		height:     height,
+		projMatrix: mathgl.Ortho2D(0, float32(width), -float32(height/2), float32(height/2)),
+		viewMatrix: mathgl.Ident4f(),
+	}
+}
+
+func (w *world) Projection() mathgl.Mat4f {
+	return w.projMatrix
+}
+
+func (w *world) View() mathgl.Mat4f {
+	return w.viewMatrix
+}
+
+// Create an image containing both expected and actual images, side by
+// side.
+func saveExpAct(outputPath string, filename string, exp image.Image, act image.Image) {
+
+	// Build the destination rectangle
+	expRect := exp.Bounds()
+	actRect := act.Bounds()
+	unionRect := expRect.Union(actRect)
+	dstRect := image.Rectangle{
+		image.ZP,
+		image.Point{unionRect.Max.X * 3, unionRect.Max.Y},
+	}
+
+	// Create the empty destination image
+	dstImage := image.NewRGBA(dstRect)
+
+	// Copy the expected image
+	dp := image.Point{
+		(unionRect.Max.X-unionRect.Min.X)/2 - (expRect.Max.X-expRect.Min.X)/2,
+		(unionRect.Max.Y-unionRect.Min.Y)/2 - (expRect.Max.Y-expRect.Min.Y)/2,
+	}
+	r := image.Rectangle{dp, dp.Add(expRect.Size())}
+	draw.Draw(dstImage, r, exp, image.ZP, draw.Src)
+
+	// Copy the actual image
+	dp = image.Point{
+		(unionRect.Max.X-unionRect.Min.X)/2 - (actRect.Max.X-expRect.Min.X)/2,
+		(unionRect.Max.Y-unionRect.Min.Y)/2 - (actRect.Max.Y-expRect.Min.Y)/2,
+	}
+	dp = dp.Add(image.Point{unionRect.Max.X, 0})
+	r = image.Rectangle{dp, dp.Add(actRect.Size())}
+	draw.Draw(dstImage, r, act, image.ZP, draw.Src)
+
+	// Re-copy the actual image
+	dp = dp.Add(image.Point{unionRect.Max.X, 0})
+	r = image.Rectangle{dp, dp.Add(actRect.Size())}
+	draw.Draw(dstImage, r, act, image.ZP, draw.Src)
+
+	// Composite expected over actual
+	dp = image.Point{dp.X, unionRect.Min.Y}
+	dstRect = image.Rectangle{dp, dp.Add(expRect.Size())}
+	draw.DrawMask(dstImage, dstRect, exp, image.ZP, &image.Uniform{color.RGBA{A: 64}}, image.ZP, draw.Over)
+
+	_, err := os.Stat(outputPath)
+	if os.IsNotExist(err) {
+		// Create the output dir
+		err := os.Mkdir(outputPath, 0777)
+		if err != nil {
+			panic(err)
+		}
+	} else if err != nil {
+		panic(err)
+	}
+
+	// Save the output file
+	file, err := os.Create(filepath.Join(outputPath, filename))
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	err = png.Encode(file, dstImage)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func NewTestSuite(outputPath string) *TestSuite {
 	return &TestSuite{
-		rlControl: newRenderLoopControl(),
-		testDraw:  make(chan image.Image),
+		rlControl:  newRenderLoopControl(),
+		testDraw:   make(chan image.Image),
+		outputPath: outputPath,
 	}
 }
