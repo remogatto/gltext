@@ -23,7 +23,7 @@ func distanceError(distance float64, filename string) string {
 func (t *TestSuite) TestPrint() {
 	// Load the font
 	responseCh := make(chan mandala.LoadResourceResponse)
-	mandala.ReadResource("raw/FreeSans.ttf", responseCh)
+	mandala.ReadResource("raw/freesans.ttf", responseCh)
 	response := <-responseCh
 	fontBuffer := response.Buffer
 	err := response.Error

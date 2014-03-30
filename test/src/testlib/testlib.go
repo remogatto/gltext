@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"git.tideland.biz/goas/loop"
-	"github.com/go-gl/glh"
 	"github.com/remogatto/gltext"
 	"github.com/remogatto/mandala"
 	"github.com/remogatto/mathgl"
@@ -228,7 +227,7 @@ func (w *world) View() mathgl.Mat4f {
 
 func (w *world) UploadRGBAImage(img *image.RGBA) gltext.Texture {
 	// Resize image to next power-of-two.
-	img = glh.Pow2Image(img).(*image.RGBA)
+	img = gltext.Pow2Image(img).(*image.RGBA)
 	t := new(texture)
 	ib := img.Bounds()
 	t.bounds = ib
