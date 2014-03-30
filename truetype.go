@@ -6,8 +6,10 @@ package gltext
 
 import (
 	"image"
+	"image/png"
 	"io"
 	"io/ioutil"
+	"os"
 
 	"code.google.com/p/freetype-go/freetype"
 	"code.google.com/p/freetype-go/freetype/truetype"
@@ -24,7 +26,7 @@ import (
 //
 // The dir value determines the orientation of the text we render
 // with this font. This should be any of the predefined Direction constants.
-func LoadTruetype(r io.Reader, scale int32, low, high rune, dir Direction) (*Font, error) {
+func LoadTruetype(r io.Reader, uploader TextureUploader, scale int32, low, high rune, dir Direction) (*Font, error) {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -60,6 +62,12 @@ func LoadTruetype(r io.Reader, scale int32, low, high rune, dir Direction) (*Fon
 
 	rect := image.Rect(0, 0, int(iw), int(ih))
 	img := image.NewRGBA(rect)
+
+	// Uncomment the followingif you want a non-transparent
+	// background (useful for debugging)
+	//
+	// blue := color.RGBA{0, 0, 255, 255}
+	// draw.Draw(img, img.Bounds(), &image.Uniform{blue}, image.ZP, draw.Src)
 
 	// Use a freetype context to do the drawing.
 	c := freetype.NewContext()
@@ -97,9 +105,24 @@ func LoadTruetype(r io.Reader, scale int32, low, high rune, dir Direction) (*Fon
 		} else {
 			gx += gw
 		}
-
 		gi++
 	}
 
-	return loadFont(img, &fc)
+	texture := uploader.UploadRGBAImage(img)
+
+	return loadFont(texture, &fc)
+}
+
+// savePng is an utility function useful for debugging generated
+// charsets.
+func savePng(filename string) {
+	file, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	err = png.Encode(file, img)
+	if err != nil {
+		panic(err)
+	}
+	file.Close()
 }

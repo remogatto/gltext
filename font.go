@@ -5,20 +5,20 @@
 package gltext
 
 import (
-	"image"
+	"fmt"
 
-	"github.com/go-gl/glh"
-	gl "github.com/remogatto/opengles2"
+	"github.com/remogatto/shaders"
 	"github.com/remogatto/shapes"
 )
 
 // A Font allows rendering of text to an OpenGL context.
 type Font struct {
-	config         *FontConfig // Character set for this font.
-	texture        uint32      // Holds the glyph texture id.
-	listbase       uint        // Holds the first display list id.
-	maxGlyphWidth  int         // Largest glyph width.
-	maxGlyphHeight int         // Largest glyph height.
+	config         *FontConfig     // Character set for this font.
+	texture        uint32          // Holds the glyph texture id.
+	program        shaders.Program // Shader program
+	listbase       []*shapes.Box   // Holds the first display list id.
+	maxGlyphWidth  int             // Largest glyph width.
+	maxGlyphHeight int             // Largest glyph height.
 }
 
 // loadFont loads the given font data. This does not deal with font scaling.
@@ -28,25 +28,14 @@ type Font struct {
 //
 // The image should hold a sprite sheet, defining the graphical layout for
 // every glyph. The config describes font metadata.
-func loadFont(img *image.RGBA, config *FontConfig) (f *Font, err error) {
+func loadFont(texture Texture, config *FontConfig) (f *Font, err error) {
 	f = new(Font)
+	f.program = shaders.NewProgram(shapes.DefaultBoxFS, shapes.DefaultBoxVS)
 	f.config = config
 
-	// Resize image to next power-of-two.
-	img = glh.Pow2Image(img).(*image.RGBA)
-	ib := img.Bounds()
-
-	// Create the texture itself. It will contain all glyphs.
-	// Individual glyph-quads display a subset of this texture.
-	gl.GenTextures(1, &f.texture)
-	gl.BindTexture(gl.TEXTURE_2D, f.texture)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.Sizei(ib.Dx()), gl.Sizei(ib.Dy()), 0,
-		gl.RGBA, gl.UNSIGNED_BYTE, gl.Void(&img.Pix[0]))
-
-	// // Create display lists for each glyph.
-	// f.listbase = gl.GenLists(len(config.Glyphs))
+	// // Resize image to next power-of-two.
+	// img = glh.Pow2Image(img).(*image.RGBA)
+	ib := texture.Bounds()
 
 	texWidth := float32(ib.Dx())
 	texHeight := float32(ib.Dy())
@@ -67,41 +56,29 @@ func loadFont(img *image.RGBA, config *FontConfig) (f *Font, err error) {
 
 		// Texture coordinate offsets.
 		glyph.tx1 = float32(glyph.X) / texWidth
-		glyph.ty1 = float32(glyph.Y) / texHeight
+		glyph.ty1 = 1.0 - float32(glyph.Y)/texHeight
 		glyph.tx2 = (float32(glyph.X) + vw) / texWidth
-		glyph.ty2 = (float32(glyph.Y) + vh) / texHeight
+		glyph.ty2 = 1.0 - (float32(glyph.Y)+vh)/texHeight
 
-		// // Advance width (or height if we render top-to-bottom)
+		// Advance width (or height if we render top-to-bottom)
 		// adv := float32(glyph.Advance)
 
-		// gl.NewList(f.listbase+uint(index), gl.COMPILE)
-		// {
-		// 	gl.Begin(gl.QUADS)
-		// 	{
-		// 		gl.TexCoord2f(tx1, ty2)
-		// 		gl.Vertex2f(0, 0)
-		// 		gl.TexCoord2f(tx2, ty2)
-		// 		gl.Vertex2f(vw, 0)
-		// 		gl.TexCoord2f(tx2, ty1)
-		// 		gl.Vertex2f(vw, vh)
-		// 		gl.TexCoord2f(tx1, ty1)
-		// 		gl.Vertex2f(0, vh)
-		// 	}
-		// 	gl.End()
+		shape := shapes.NewBox(f.program, vw, vh)
+		// shape.SetColor(color.White)
+		shape.SetTexture(
+			texture.Id(),
+			[]float32{
+				glyph.tx1, glyph.ty2,
+				glyph.tx2, glyph.ty2,
+				glyph.tx1, glyph.ty1,
+				glyph.tx2, glyph.ty1,
+			},
+		)
 
-		// 	switch config.Dir {
-		// 	case LeftToRight:
-		// 		gl.Translatef(adv, 0, 0)
-		// 	case RightToLeft:
-		// 		gl.Translatef(-adv, 0, 0)
-		// 	case TopToBottom:
-		// 		gl.Translatef(0, -adv, 0)
-		// 	}
-		// }
-		// gl.EndList()
+		f.listbase = append(f.listbase, shape)
+
 	}
 
-	//	err = glh.CheckGLError()
 	return
 }
 
@@ -175,81 +152,6 @@ func (f *Font) advanceSize(line string) int {
 	return size
 }
 
-// // Printf draws the given string at the specified coordinates.
-// // It expects the string to be a single line. Line breaks are not
-// // handled as line breaks and are rendered as glyphs.
-// //
-// // In order to render multi-line text, it is up to the caller to split
-// // the text up into individual lines of adequate length and then call
-// // this method for each line seperately.
-// func (f *Font) Printf(x, y float32, fs string, argv ...interface{}) error {
-// 	indices := []rune(fmt.Sprintf(fs, argv...))
-
-// 	if len(indices) == 0 {
-// 		return nil
-// 	}
-
-// 	// Runes form display list indices.
-// 	// For this purpose, they need to be offset by -FontConfig.Low
-// 	low := f.config.Low
-// 	for i := range indices {
-// 		indices[i] -= low
-// 	}
-
-// 	var vp [4]int32
-// 	gl.GetIntegerv(gl.VIEWPORT, vp[:])
-
-// 	gl.PushAttrib(gl.TRANSFORM_BIT)
-// 	gl.MatrixMode(gl.PROJECTION)
-// 	gl.PushMatrix()
-// 	gl.LoadIdentity()
-// 	gl.Ortho(float64(vp[0]), float64(vp[2]), float64(vp[1]), float64(vp[3]), 0, 1)
-// 	gl.PopAttrib()
-
-// 	gl.PushAttrib(gl.LIST_BIT | gl.CURRENT_BIT | gl.ENABLE_BIT | gl.TRANSFORM_BIT)
-// 	{
-// 		gl.MatrixMode(gl.MODELVIEW)
-// 		gl.Disable(gl.LIGHTING)
-// 		gl.Disable(gl.DEPTH_TEST)
-// 		gl.Enable(gl.BLEND)
-// 		gl.Enable(gl.TEXTURE_2D)
-
-// 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-// 		gl.TexEnvf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
-// 		f.texture.Bind(gl.TEXTURE_2D)
-// 		gl.ListBase(f.listbase)
-
-// 		var mv [16]float32
-// 		gl.GetFloatv(gl.MODELVIEW_MATRIX, mv[:])
-
-// 		gl.PushMatrix()
-// 		{
-// 			gl.LoadIdentity()
-
-// 			mgw := float32(f.maxGlyphWidth)
-// 			mgh := float32(f.maxGlyphHeight)
-
-// 			switch f.config.Dir {
-// 			case LeftToRight, TopToBottom:
-// 				gl.Translatef(x, float32(vp[3])-y-mgh, 0)
-// 			case RightToLeft:
-// 				gl.Translatef(x-mgw, float32(vp[3])-y-mgh, 0)
-// 			}
-
-// 			gl.MultMatrixf(&mv)
-// 			gl.CallLists(len(indices), gl.UNSIGNED_INT, indices)
-// 		}
-// 		gl.PopMatrix()
-// 	}
-// 	gl.PopAttrib()
-
-// 	gl.PushAttrib(gl.TRANSFORM_BIT)
-// 	gl.MatrixMode(gl.PROJECTION)
-// 	gl.PopMatrix()
-// 	gl.PopAttrib()
-// 	return glh.CheckGLError()
-// }
-
 // GlyphBounds returns the largest width and height for any of the glyphs
 // in the font. This constitutes the largest possible bounding box
 // a single glyph will have.
@@ -257,6 +159,32 @@ func (f *Font) GlyphBounds() (int, int) {
 	return f.maxGlyphWidth, f.maxGlyphHeight
 }
 
-func (f *Font) Printf(format string, argv ...interface{}) (shapes.Shape, error) {
-	return nil, nil
+func (f *Font) Printf(format string, argv ...interface{}) (*shapes.Group, error) {
+	text := shapes.NewGroup()
+	str := fmt.Sprintf(format, argv...)
+	indices := []rune(str)
+
+	if len(indices) == 0 {
+		return nil, nil
+	}
+
+	// Runes form display list indices.
+	// For this purpose, they need to be offset by -FontConfig.Low
+	low := f.config.Low
+	x, y := float32(0), float32(0)
+	tw, th := f.Metrics(str)
+	for i := range indices {
+		id := indices[i] - low
+		letter := f.listbase[id].Clone()
+		letter.MoveTo(x, y)
+		text.Append(letter)
+		adv := f.config.Glyphs[id].Advance
+		x += float32(adv)
+	}
+
+	// Recalculate the center of the text group
+	verts := text.Vertices()
+	text.SetCenter(verts[0]+float32(tw/2), verts[1]+float32(th/2))
+
+	return text, nil
 }

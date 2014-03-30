@@ -8,11 +8,12 @@ import (
 	"github.com/remogatto/imagetest"
 	"github.com/remogatto/mandala"
 	"github.com/remogatto/mandala/test/src/testlib"
+
 	gl "github.com/remogatto/opengles2"
 )
 
 const (
-	distanceThreshold = 0.02
+	distanceThreshold = 0.03
 )
 
 func distanceError(distance float64, filename string) string {
@@ -37,7 +38,7 @@ func (t *TestSuite) TestPrint() {
 		world := newWorld(w, h)
 
 		// Render an "Hello World" string
-		sans, err := gltext.LoadTruetype(bytes.NewBuffer(fontBuffer), 1, 'A', 'z', gltext.LeftToRight)
+		sans, err := gltext.LoadTruetype(bytes.NewBuffer(fontBuffer), world, 40, 32, 127, gltext.LeftToRight)
 		if err != nil {
 			panic(err)
 		}
@@ -48,17 +49,19 @@ func (t *TestSuite) TestPrint() {
 		}
 
 		text.AttachToWorld(world)
+		text.MoveTo(float32(world.width/2), -10.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-		text.MoveTo(20, 20)
 		text.Draw()
-		t.testDraw <- testlib.Screenshot(t.renderState.window)
+
 		t.renderState.window.SwapBuffers()
+		t.testDraw <- testlib.Screenshot(t.renderState.window)
 	}
 
 	distance, exp, act, err := testlib.TestImage(filename, <-t.testDraw, imagetest.Center)
 	if err != nil {
 		panic(err)
 	}
+
 	t.True(distance < distanceThreshold, distanceError(distance, filename))
 	if t.Failed() {
 		saveExpAct(t.outputPath, "failed_"+filename, exp, act)

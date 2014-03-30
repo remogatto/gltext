@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"git.tideland.biz/goas/loop"
+	"github.com/go-gl/glh"
+	"github.com/remogatto/gltext"
 	"github.com/remogatto/mandala"
 	"github.com/remogatto/mathgl"
 	gl "github.com/remogatto/opengles2"
@@ -24,6 +26,19 @@ const (
 
 	expectedImgPath = "res/drawable"
 )
+
+type texture struct {
+	bounds image.Rectangle
+	id     uint32
+}
+
+func (t *texture) Bounds() image.Rectangle {
+	return t.bounds
+}
+
+func (t *texture) Id() uint32 {
+	return t.id
+}
 
 type world struct {
 	width, height int
@@ -209,6 +224,20 @@ func (w *world) Projection() mathgl.Mat4f {
 
 func (w *world) View() mathgl.Mat4f {
 	return w.viewMatrix
+}
+
+func (w *world) UploadRGBAImage(img *image.RGBA) gltext.Texture {
+	// Resize image to next power-of-two.
+	img = glh.Pow2Image(img).(*image.RGBA)
+	t := new(texture)
+	ib := img.Bounds()
+	t.bounds = ib
+	gl.GenTextures(1, &t.id)
+	gl.BindTexture(gl.TEXTURE_2D, t.id)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.Sizei(ib.Dx()), gl.Sizei(ib.Dy()), 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Void(&img.Pix[0]))
+	return t
 }
 
 // Create an image containing both expected and actual images, side by
