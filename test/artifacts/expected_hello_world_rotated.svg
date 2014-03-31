@@ -27,9 +27,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="1"
-     inkscape:cx="165.13866"
-     inkscape:cy="228.88309"
+     inkscape:zoom="1.1566038"
+     inkscape:cx="40.875638"
+     inkscape:cy="237"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -55,21 +55,17 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(0,-572.36218)">
-    <g
-       id="g3256"
-       transform="matrix(0.99224341,-0.12431009,0.12431009,0.99224341,-93.960803,-47.131771)">
-      <flowRoot
-         transform="matrix(0.91878657,-0.39475466,0.39475466,0.91878657,-47.666372,695.89846)"
-         style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
-         id="flowRoot2985-5"
-         xml:space="preserve"><flowRegion
-           id="flowRegion2987-8"><rect
-             style="fill:#ffffff"
-             y="68.450241"
-             x="36.313213"
-             height="89.053825"
-             width="293.09952"
-             id="rect2989-1" /></flowRegion><flowPara
-           id="flowPara2991-11">Hello World!</flowPara></flowRoot>    </g>
-  </g>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot2985"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:-2.5px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
+       transform="matrix(0.70710678,-0.70710678,0.70710678,0.70710678,-12.000592,853.81223)"><flowRegion
+         id="flowRegion2987"><rect
+           id="rect2989"
+           width="293.09952"
+           height="89.053825"
+           x="36.313213"
+           y="68.450241"
+           style="letter-spacing:-2.5px;fill:#ffffff" /></flowRegion><flowPara
+         id="flowPara2991">Hello World!</flowPara></flowRoot>  </g>
 </svg>

@@ -1,6 +1,7 @@
 package testlib
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
@@ -43,6 +44,7 @@ type world struct {
 	width, height int
 	projMatrix    mathgl.Mat4f
 	viewMatrix    mathgl.Mat4f
+	font          *gltext.Font
 }
 
 type TestSuite struct {
@@ -209,12 +211,31 @@ func (t *TestSuite) BeforeAll() {
 }
 
 func newWorld(width, height int) *world {
-	return &world{
+	// Load the font
+	responseCh := make(chan mandala.LoadResourceResponse)
+	mandala.ReadResource("raw/freesans.ttf", responseCh)
+	response := <-responseCh
+	fontBuffer := response.Buffer
+	err := response.Error
+	if err != nil {
+		panic(err)
+	}
+
+	w := &world{
 		width:      width,
 		height:     height,
 		projMatrix: mathgl.Ortho2D(0, float32(width), -float32(height/2), float32(height/2)),
 		viewMatrix: mathgl.Ident4f(),
 	}
+
+	sans, err := gltext.LoadTruetype(bytes.NewBuffer(fontBuffer), w, 40, 32, 127, gltext.LeftToRight)
+	if err != nil {
+		panic(err)
+	}
+
+	w.font = sans
+
+	return w
 }
 
 func (w *world) Projection() mathgl.Mat4f {
