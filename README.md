@@ -3,13 +3,12 @@
 **Note**: This package is experimental and subject to change.
 Use at your own discretion.
 
-The gltext package offers a simple set of text rendering utilities for OpenGL
-programs. It deals with TrueType and Bitmap (raster) fonts. Text can be
-rendered in various directions (Left-to-right, right-to-left and top-to-bottom).
-This allows for correct display of text for various languages.
+The gltext package offers a simple set of text rendering utilities for
+OpenGL ES 2.0 programs. It deals with TrueType and Bitmap (raster)
+fonts (the last one is not yet implemented on this fork). 
 
-The package supports the full set of unicode characters, provided the loaded
-font does as well.
+The package supports the full set of unicode characters, provided the
+loaded font does as well.
 
 
 ### TODO
@@ -20,20 +19,21 @@ font does as well.
   * [SIGGRAPH2007_AlphaTestedMagnification.pdf](http://www.valvesoftware.com/publications/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf)
   * [Youtube video](http://www.youtube.com/watch?v=CGZRHJvJYIg)
   
-  More links to info in the youtube video description.
-  An alternative might be a port of [GLyphy](http://code.google.com/p/glyphy/)
+  More links to info in the youtube video description. An alternative
+  might be a port of [GLyphy](http://code.google.com/p/glyphy/)
 
 
 ### Known bugs
 
 * Determining the height of truetype glyphs is not entirely accurate.
   It is unclear at this point how to get to this information reliably.
-  Specifically the parts in `LoadTruetype` at truetype.go#L54+.
-  The vertical glyph bounds computed by freetype-go are not correct for
-  certain fonts. Right now we manually offset the value by added `4` to
-  the height. This is an unreliable hack and should be fixed.
-* `freetype-go` does not expose `AdvanceHeight` for vertically rendered fonts.
-  This may mean that the Advance size for top-to-bottom fonts is incorrect.
+  Specifically the parts in `LoadTruetype` at truetype.go#L54+.  The
+  vertical glyph bounds computed by freetype-go are not correct for
+  certain fonts. Right now we manually offset the value by added `4`
+  to the height. This is an unreliable hack and should be fixed.
+* `freetype-go` does not expose `AdvanceHeight` for vertically
+  rendered fonts.  This may mean that the Advance size for
+  top-to-bottom fonts is incorrect.
 
 
 ### Dependencies
