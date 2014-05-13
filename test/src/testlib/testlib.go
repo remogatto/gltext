@@ -76,7 +76,7 @@ func (renderState *renderState) init(window mandala.Window) {
 
 	// Set the viewport
 	gl.Viewport(0, 0, gl.Sizei(width), gl.Sizei(height))
-	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+	gl.ClearColor(0.0, 0.0, 1.0, 1.0)
 }
 
 func newRenderLoopControl() *renderLoopControl {
