@@ -62,7 +62,7 @@ func LoadTruetype(r io.Reader, uploader TextureUploader, scale int32, low, high 
 	rect := image.Rect(0, 0, int(iw), int(ih))
 	img := image.NewRGBA(rect)
 
-	// Uncomment the followingif you want a non-transparent
+	// Uncomment the following if you want a non-transparent
 	// background (useful for debugging)
 	//
 	// blue := color.RGBA{0, 0, 255, 255}

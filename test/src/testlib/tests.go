@@ -31,7 +31,11 @@ func (t *TestSuite) TestPrint() {
 
 		text.AttachToWorld(world)
 		text.MoveTo(float32(world.width/2), -10.0)
+
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
+
 		text.Draw()
 
 		t.renderState.window.SwapBuffers()
@@ -65,6 +69,10 @@ func (t *TestSuite) TestRotate() {
 		text.AttachToWorld(world)
 		text.MoveTo(float32(world.width/2)+5, -5.0)
 		text.Rotate(45)
+
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		text.Draw()
 

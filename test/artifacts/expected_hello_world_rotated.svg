@@ -59,7 +59,9 @@
        xml:space="preserve"
        id="flowRoot2985"
        style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:-2.5px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
-       transform="matrix(0.70710678,-0.70710678,0.70710678,0.70710678,-12.000592,853.81223)"><flowRegion
+       transform="matrix(0.70710678,-0.70710678,0.70710678,0.70710678,-12.000592,853.81223)"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><flowRegion
          id="flowRegion2987"><rect
            id="rect2989"
            width="293.09952"
